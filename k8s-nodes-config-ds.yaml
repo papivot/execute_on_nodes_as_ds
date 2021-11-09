@@ -18,7 +18,7 @@ data:
     tdnf update -y
 
     # Do not remove this bottom line
-    touch installation-complete.txt
+    touch /tmp/install/installation-complete.txt
 ---
 apiVersion: apps/v1
 kind: DaemonSet
