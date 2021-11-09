@@ -1,4 +1,4 @@
-# Daemonset to configure K8s Linux node configuration
+# Daemonset to modify K8s Linux node configuration
 
 A unique way of configuring/modifying properties of the Linux OS of Kubernetes nodes, the process leverages Kubernetes artifacts and Linux namespaces to affect the relevant changes at the Linux OS level. The changes may include -
 - adding additional security packages, 
