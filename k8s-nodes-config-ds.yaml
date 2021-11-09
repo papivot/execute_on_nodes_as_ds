@@ -1,0 +1,60 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: installation-scripts
+  namespace: kube-system
+data:
+  wait.sh: |
+    #!/bin/bash
+    # Do not modify this script
+    # Sleep for 5 mins to allow node to be ready
+    sleep 5m
+
+  install.sh: |
+    #!/bin/bash
+    # Add node and OS specific commands that need to be executed
+    tdnf check-update -y
+    tdnf update -y
+
+    # Do not remove this bottom line
+    touch installation-complete.txt
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: node-configure
+  namespace: kube-system
+spec:
+  selector:
+    matchLabels:
+      name: node-configure-job
+  template:
+    metadata:
+      labels:
+        name: node-configure-job
+    spec:
+      hostPID: true
+      restartPolicy: Always
+      containers:
+      - image: whoami6443/node-execution:0.0.2
+        name: node-configure-pod
+        securityContext:
+          privileged: true
+        volumeMounts:
+        - name: host-mount
+          mountPath: /host
+        - name: install-script
+          mountPath: /tmp
+      volumes:
+      - name: install-script
+        configMap:
+          name: installation-scripts
+      - name: host-mount
+        hostPath:
+          path: /tmp/install
+      nodeSelector:
+        kubernetes.io/os: linux
+      tolerations:
+      - key: node-role.kubernetes.io/master
+        effect: NoSchedule
