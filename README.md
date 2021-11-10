@@ -9,8 +9,8 @@ Since the process is executed as a Kubernetes daemon set (see attached YAML file
 
 ## Configuration
 The configmap within the `k8s-nodes-config-ds.yaml` file consists of two driver scripts - `wait.sh` and `install.sh`. 
-* `wait.sh`'s logic could be modified to introduce delay in the process to give new Kubernetes nodes time to complete any pending housekeeping before executing the install.sh script.  
-* `install.sh` script can be modified to perform the required changes on all the nodes. Sample commands like  - `tdnf check-update` and `tdnf update` update all the Kubernetes nodes' packages on a Photon based OS image.
+* `wait.sh`'s logic could be modified to introduce delay in the process to give new Kubernetes nodes time to complete any pending housekeeping before executing the install.sh script.  This could be modified as per cluster specific requreiments.
+* `install.sh` script can be modified to perform the desired changes on all the nodes. This is where all the magic happens. Sample commands like  - `tdnf check-update` and `tdnf update` update all the Kubernetes nodes' packages on a Photon based OS image.
 
 ```yaml
 data:
