@@ -7,18 +7,28 @@ metadata:
 data:
   wait.sh: |
     #!/bin/bash
-    # Do not modify this script
-    # Sleep for 5 mins to allow node to be ready
+    # Modify the wait script to suit your node ready logic
+    # E.g. Sleep for 5 mins to allow node to be ready
     sleep 5m
 
   install.sh: |
     #!/bin/bash
-    # Add node and OS specific commands that need to be executed
-    tdnf check-update -y
-    tdnf update -y
+    if [ ! -f /tmp/install/installation-complete.txt ]
+    then
+    # --------- Add your node and OS specific commands that need to be executed -----
+    # --------- All files are located and executed from /tmp/install folder --------
+      tdnf check-update -y
+      tdnf update -y
 
-    # Do not remove this bottom line
-    touch /tmp/install/installation-complete.txt
+
+    # ----------- Do not modify the lines below ---------------
+      touch /tmp/install/installation-complete.txt
+    else
+      # Script execution was completed previously. Exit gracefully.
+      exit 0
+    fi
+
+  # Add additonal files to be passwd thru configmap here
 ---
 apiVersion: apps/v1
 kind: DaemonSet
@@ -35,17 +45,16 @@ spec:
         name: node-configure-job
     spec:
       hostPID: true
-      restartPolicy: Always
       containers:
       - image: whoami6443/node-execution:0.0.2
         name: node-configure-pod
         securityContext:
           privileged: true
         volumeMounts:
+        - name: install-script
+          mountPath: /host-install-files
         - name: host-mount
           mountPath: /host
-        - name: install-script
-          mountPath: /tmp
       volumes:
       - name: install-script
         configMap:
@@ -53,6 +62,7 @@ spec:
       - name: host-mount
         hostPath:
           path: /tmp/install
+# Use these to control the nodes on which to execute the scripts. 
       nodeSelector:
         kubernetes.io/os: linux
       tolerations:

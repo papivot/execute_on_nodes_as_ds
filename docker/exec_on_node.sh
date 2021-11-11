@@ -1,8 +1,7 @@
 #!/bin/bash
 echo "Starting execution of install script"
-echo "Copying required binaries to the host filesystem"
-cp /tmp/install.sh /host
-cp /tmp/wait.sh /host
+echo "Copying required binaries and files to the host filesystem"
+cp /host-install-files/* /host
 
 /usr/bin/nsenter -a -t 1 chmod +x /tmp/install/install.sh
 /usr/bin/nsenter -a -t 1 chmod +x /tmp/install/wait.sh
