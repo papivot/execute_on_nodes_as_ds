@@ -46,7 +46,7 @@ spec:
     spec:
       hostPID: true
       containers:
-      - image: whoami6443/node-execution:0.0.2
+      - image: whoami6443/node-execution:0.0.3
         name: node-configure-pod
         securityContext:
           privileged: true
