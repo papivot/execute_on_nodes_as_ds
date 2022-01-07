@@ -1,9 +1,16 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: k8s-papivot-tools
+  labels:
+    name: k8s-papivot-tools
+    app: k8s-papivot-tools
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: installation-scripts
-  namespace: kube-system
+  namespace: k8s-papivot-tools
 data:
   wait.sh: |
     #!/bin/bash
@@ -34,7 +41,7 @@ apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: node-configure
-  namespace: kube-system
+  namespace: k8s-papivot-tools
 spec:
   selector:
     matchLabels:
