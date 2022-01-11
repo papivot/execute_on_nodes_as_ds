@@ -51,7 +51,7 @@ data:
     [Install]
     WantedBy=multi-user.target
 
-  # Add additonal files to be passwd thru configmap here
+  # Add additonal files to be passed thru configmap here
 ---
 apiVersion: apps/v1
 kind: DaemonSet
