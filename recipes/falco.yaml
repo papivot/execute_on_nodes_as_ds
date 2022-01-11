@@ -71,7 +71,7 @@ spec:
       containers:
       - env:
         - name: TINI_SUBREAPER
-      - image: whoami6443/node-execution:0.0.3
+        image: whoami6443/node-execution:0.0.3
         name: node-configure-pod
         securityContext:
           privileged: true
