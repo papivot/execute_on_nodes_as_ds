@@ -20,16 +20,18 @@ data:
 
   install.sh: |
     #!/bin/bash
-    if [ ! -f /tmp/install/installation-complete.txt ]
+    if [ ! -f /var/tmp/ds-installation-complete.txt ]
     then
     # --------- Add your node and OS specific commands that need to be executed -----
     # --------- All files are located and executed from /tmp/install folder --------
+    # --------- Do not trigger a reboot from this script -------
+    # --------- Use nodes cordon/drain before initiating a reboot, as unmoniotred reboot may cause data corruption 
       tdnf check-update -y
       tdnf update -y
 
 
     # ----------- Do not modify the lines below ---------------
-      touch /tmp/install/installation-complete.txt
+      touch /var/tmp/ds-installation-complete.txt
     else
       # Script execution was completed previously. Exit gracefully.
       exit 0
