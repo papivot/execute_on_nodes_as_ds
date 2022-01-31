@@ -22,6 +22,7 @@ data:
     #!/bin/bash
     if [ ! -f /var/tmp/ds-installation-complete.txt ]
     then
+    echo "Executing user requested node configuration script..."
     # --------- Add your node and OS specific commands that need to be executed -----
     # --------- All files are located and executed from /tmp/install folder --------
     # --------- Do not trigger a reboot from this script -------
@@ -34,6 +35,7 @@ data:
       touch /var/tmp/ds-installation-complete.txt
     else
       # Script execution was completed previously. Exit gracefully.
+      echo "Skipping. User requested node configuration script previously executed..."
       exit 0
     fi
 
