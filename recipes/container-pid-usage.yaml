@@ -50,7 +50,7 @@ data:
       # Script execution was completed previously. Exit gracefully.
       exit 0
     fi
-    
+
   # Add additonal files to be passed thru configmap here
 ---
 apiVersion: apps/v1
