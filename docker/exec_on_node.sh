@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 echo "Starting execution of install script"
 echo "Copying required binaries and files to the host filesystem"
 cp /host-install-files/* /host

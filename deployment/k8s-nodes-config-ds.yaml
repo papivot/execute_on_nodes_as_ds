@@ -55,14 +55,25 @@ spec:
       labels:
         name: node-configure-job
     spec:
+      # hostPID is required for nsenter to access the host's process namespace.
+      # This is a security risk, as it allows the pod to see all processes on the host.
       hostPID: true
       containers:
       - env:
         - name: TINI_SUBREAPER
-        image: whoami6443/node-execution:0.1.0
+        # IMPORTANT: Replace with an image from your private, trusted registry.
+        image: <your-private-registry>/node-execution:0.1.0
         name: node-configure-pod
         securityContext:
-          privileged: true
+          # The following capabilities are required for nsenter to work.
+          # This is more secure than running with privileged: true.
+          capabilities:
+            add:
+            - SYS_ADMIN
+            - SYS_PTRACE
+            - SYS_CHROOT
+          # readOnlyRootFilesystem makes the container's root filesystem read-only.
+          readOnlyRootFilesystem: true
         volumeMounts:
         - name: install-script
           mountPath: /host-install-files
@@ -75,9 +86,12 @@ spec:
       - name: host-mount
         hostPath:
           path: /tmp/install
-# Use these to control the nodes on which to execute the scripts. 
+      # Use a specific nodeSelector to control which nodes the DaemonSet runs on.
+      # Label your target nodes with `papivot.com/node-config-target: "true"`
       nodeSelector:
-        kubernetes.io/os: linux
-      tolerations:
-      - key: node-role.kubernetes.io/control-plane
-        effect: NoSchedule
+        papivot.com/node-config-target: "true"
+      # By default, this DaemonSet will not run on control-plane nodes.
+      # If you need to run on control-plane nodes, uncomment the following toleration.
+      # tolerations:
+      # - key: node-role.kubernetes.io/control-plane
+      #   effect: NoSchedule

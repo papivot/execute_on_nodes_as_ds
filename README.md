@@ -1,63 +1,101 @@
 # Daemonset to modify K8s Linux node configuration
 
-An easy method of configuring/modifying properties of the Linux OS of Kubernetes nodes, the process leverages Kubernetes artifacts and Linux namespaces to affect the relevant changes at the Linux OS level. The changes may include -
-- adding additional security packages, 
-- adding config files like ssh keys,
-- updating system packages, 
-- modifying kernel parameters,
-- other routine changes.
-Since the process is executed as a Kubernetes daemonset (see attached YAML file), changes persist even after new nodes are introduced or old nodes are destroyed from the K8s clusters.  
+This repository contains a set of files to build and deploy a Kubernetes DaemonSet that can be used to perform configuration changes on the underlying Linux OS of the Kubernetes nodes.
 
-*Note* Since the process requries root level access to the K8s nodes, please use caution while deploying this image. The daemonset requires `hostPID: true` and `privileged: true` to be set. See the attached `k8s-nodes-config-ds.yaml` file.
+## :warning: Security Warning :warning:
 
-## Building a new container image (optional)
+This tool is very powerful and carries significant security risks. It runs a container with elevated privileges on your Kubernetes nodes, which, if compromised, could lead to a full cluster compromise.
 
-- Modify the `exec_on_node.sh` script (if needed)
-- Use the provided Dockerfile as a sample and build a new container image. 
-- Upload the image to a registry of your choice
+**Use this tool with extreme caution.**
+
+- **Restrict access:** Only allow trusted users to deploy and manage this DaemonSet.
+- **Use a private registry:** Always host your container images in a private, trusted registry.
+- **Limit scope:** Use the `nodeSelector` to ensure the DaemonSet only runs on the intended nodes.
+- **Audit changes:** Carefully review any changes to the `install.sh` script in the `ConfigMap`.
+
+## File Overview
+
+- `docker/Dockerfile`: Used to build the container image that runs on the nodes. It has been optimized for security and size.
+- `docker/exec_on_node.sh`: The entrypoint script for the container. It uses `nsenter` to execute scripts from the `ConfigMap` on the host node.
+- `deployment/k8s-nodes-config-ds.yaml`: The Kubernetes manifest for the DaemonSet. It has been secured by removing `privileged` mode, adding specific capabilities, and restricting its execution scope.
+- `README.md`: This file.
+
+## How it works
+
+The process leverages a Kubernetes DaemonSet to run a container on each target node. This container has access to the host's process namespace (`hostPID: true`) and is granted specific capabilities (`SYS_ADMIN`, `SYS_PTRACE`, `SYS_CHROOT`) that allow it to use `nsenter`. `nsenter` is a tool that can run a program in another process's namespaces. In this case, it targets the `init` process (PID 1) on the host to execute scripts as if they were running directly on the node's OS.
+
+The scripts to be executed are provided via a `ConfigMap`, which allows for easy customization without rebuilding the container image.
+
+## Building the container image
+
+1.  **(Optional)** Modify the `docker/exec_on_node.sh` script if you need to change the core execution logic.
+2.  Build the container image using the provided `Dockerfile`:
+    ```bash
+    docker build -t <your-private-registry>/node-execution:0.1.0 docker/
+    ```
+3.  Push the image to your private registry:
+    ```bash
+    docker push <your-private-registry>/node-execution:0.1.0
+    ```
 
 ## Deployment on a K8s cluster
 
-* Users can use the attached `Dockerfile` to build a new container image or use one already available on deployment yaml.
-* Modify the  `k8s-nodes-config-ds.yaml` file - 
-  * Modify the container image name (if needed)
-  * The configmap within the `k8s-nodes-config-ds.yaml` file consists of two driver scripts - `wait.sh` and `install.sh`. 
-    *  `wait.sh`'s logic could be modified to introduce delay in the process to give new Kubernetes nodes time to complete any pending housekeeping before executing the install.sh script.  This could be modified as per cluster specific requreiments. Please use the defaule values if not sure. (see example below)
-    * `install.sh` script can be modified to perform the desired changes on all the nodes. This is where all the magic happens. Sample commands like  - `tdnf check-update` and `tdnf update` update all the Kubernetes nodes' packages on a Photon based OS image. (see example below)
-    * Add any additional files that may be needed for the configuration.
+1.  **Label your target nodes:** The provided `k8s-nodes-config-ds.yaml` uses a `nodeSelector` to target specific nodes. You need to label the nodes where you want this DaemonSet to run.
+    ```bash
+    kubectl label node <your-node-name> papivot.com/node-config-target="true"
+    ```
+
+2.  **Customize the installation scripts:** Modify the `install.sh` and `wait.sh` scripts within the `ConfigMap` in the `deployment/k8s-nodes-config-ds.yaml` file to perform your desired actions. The `install.sh` script creates a file at `/var/tmp/ds-installation-complete.txt` to prevent re-execution on subsequent container starts.
+
+3.  **Deploy the DaemonSet:**
+    ```bash
+    kubectl apply -f deployment/k8s-nodes-config-ds.yaml
+    ```
+
+### Example `k8s-nodes-config-ds.yaml`
+
+The `deployment/k8s-nodes-config-ds.yaml` file is already configured with security best practices. Below is a snippet of the `DaemonSet` resource for reference.
 
 ```yaml
-apiVersion: v1
-kind: ConfigMap
-...
-...
-data:
-  wait.sh: |
-    #!/bin/bash
-    # Modify the wait script to suit your node ready logic
-    # E.g. Sleep for 5 mins to allow node to be ready
-    sleep 5m
-
-  install.sh: |
-    #!/bin/bash
-    if [ ! -f /tmp/install/installation-complete.txt ]
-    then
-    # --------- Add your node and OS specific commands that need to be executed -----
-    # --------- All files are located and executed from /tmp/install folder --------
-      tdnf check-update -y
-      tdnf update -y
-
-    # ----------- Do not modify the lines below ---------------
-      touch /tmp/install/installation-complete.txt
-    else
-      # Script execution was completed previously. Exit gracefully.
-      exit 0
-    fi
-
-  # Add additonal files to be passwd thru configmap here
-```
-* Deploy the daemonset on the K8s cluster 
-```yaml
-kubectl apply -f k8s-nodes-config-ds.yaml
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: node-configure
+  namespace: k8s-papivot-tools
+spec:
+  selector:
+    matchLabels:
+      name: node-configure-job
+  template:
+    metadata:
+      labels:
+        name: node-configure-job
+    spec:
+      hostPID: true
+      containers:
+      - image: <your-private-registry>/node-execution:0.1.0
+        name: node-configure-pod
+        securityContext:
+          capabilities:
+            add:
+            - SYS_ADMIN
+            - SYS_PTRACE
+            - SYS_CHROOT
+          readOnlyRootFilesystem: true
+        volumeMounts:
+        - name: install-script
+          mountPath: /host-install-files
+        - name: host-mount
+          mountPath: /host
+      volumes:
+      - name: install-script
+        configMap:
+          name: installation-scripts
+      - name: host-mount
+        hostPath:
+          path: /tmp/install
+      nodeSelector:
+        papivot.com/node-config-target: "true"
 ```
 ---
+The `recipes` directory contains examples of other tools and techniques for interacting with nodes, such as `falco` for security monitoring. These are not directly related to the node configuration DaemonSet but are provided as additional resources.
