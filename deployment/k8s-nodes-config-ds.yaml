@@ -1,16 +1,7 @@
 apiVersion: v1
-kind: Namespace
-metadata:
-  name: k8s-papivot-tools
-  labels:
-    name: k8s-papivot-tools
-    app: k8s-papivot-tools
----
-apiVersion: v1
 kind: ConfigMap
 metadata:
   name: installation-scripts
-  namespace: k8s-papivot-tools
 data:
   wait.sh: |
     #!/bin/bash
@@ -26,7 +17,7 @@ data:
     # --------- Add your node and OS specific commands that need to be executed -----
     # --------- All files are located and executed from /tmp/install folder --------
     # --------- Do not trigger a reboot from this script -------
-    # --------- Use nodes cordon/drain before initiating a reboot, as an unmonitored reboot may cause data corruption 
+    # --------- Use nodes cordon/drain before initiating a reboot, as an unmonitored reboot may cause data corruption
       tdnf check-update -y
       tdnf update -y
 
@@ -45,7 +36,6 @@ apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: node-configure
-  namespace: k8s-papivot-tools
 spec:
   selector:
     matchLabels:
@@ -59,10 +49,15 @@ spec:
       containers:
       - env:
         - name: TINI_SUBREAPER
-        image: whoami6443/node-execution:0.1.0
+        image: us-central1-docker.pkg.dev/navneet-410819/whoami6443-hub/whoami6443/node-execution:0.2.2
         name: node-configure-pod
         securityContext:
           privileged: true
+#          capabilities:
+#            add:
+#            - SYS_ADMIN
+#            - SYS_PTRACE
+#            - SYS_CHROOT
         volumeMounts:
         - name: install-script
           mountPath: /host-install-files
@@ -72,10 +67,12 @@ spec:
       - name: install-script
         configMap:
           name: installation-scripts
+          defaultMode: 0755
       - name: host-mount
         hostPath:
-          path: /tmp/install
-# Use these to control the nodes on which to execute the scripts. 
+          path: /var/tmp/install
+          type: DirectoryOrCreate
+# Use these to control the nodes on which to execute the scripts.
       nodeSelector:
         kubernetes.io/os: linux
       tolerations:
