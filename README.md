@@ -1,10 +1,10 @@
 # Daemonset to modify K8s Linux node configuration
 
-This repository contains files to build and deploy a Kubernetes DaemonSet that can be used to apply configuration changes to the underlying Linux OS on the Kubernetes nodes.
+This repository contains files to build and deploy a Kubernetes DaemonSet that applies configuration changes to the underlying Linux OS on the Kubernetes nodes.
 
 ## :warning: Security Warning :warning:
 
-This tool carries significant risks. It runs a container with elevated privileges on your Kubernetes nodes, which, if compromised, could lead to a complete cluster compromise.
+This tool carries risks. It runs a container with elevated privileges on your Kubernetes nodes, which, if compromised, could lead to a complete cluster compromise.
 
 **Use this tool with extreme caution.**
 
